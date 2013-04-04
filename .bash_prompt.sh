@@ -69,7 +69,7 @@ is_git_dir() {
 git_branch_prompt() {
   eval "$(prompt_constants)"
   local git_branch=$(git branch | grep "*" | awk '{print $2}')
-  if [ $? -ea 0 ]; then
+  if [ $? -eq 0 ]; then
       echo -n "${yellow}${arrow}${git_branch}"  
   fi
 }
