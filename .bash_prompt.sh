@@ -10,7 +10,10 @@ prompt_constants() {
     local arrow=' → '
     local user='\u'
     local host='\h'
-    local dir='\W'
+    local dir='\w'
+
+    local title_start="\[\033]2;"
+    local title_end="\007\]"
 __END
 }
 
@@ -127,10 +130,8 @@ is_xterm() {
 terminal_title() {
   if is_xterm; then
     disable_color_prompt=yes
-    local start="\033]2;"
-    local end="\007"
-    local prompt_data="$(default_prompt)$(git_prompt)"
-    echo -n "${start}${prompt_data}${end}"
+    eval "$(prompt_constants)"
+    echo -n "${title_start}$(default_prompt)$(git_prompt)${title_end}"
     unset disable_color_prompt
   fi
 }
