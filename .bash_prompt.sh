@@ -3,26 +3,10 @@
 export CLICOLOR=1
 export LSCOLORS=gxBxhxDxfxhxhxhxhxcxcx
 
-# Avoid name collision
-prompt_constants() {
-  color_profile
-  cat << __END 
-    local arrow=' → '
-    local user='\u'
-    local host='\h'
-    local dir='\w'
-
-    local title_start="\[\033]2;"
-    local title_end="\007\]"
-__END
-}
-
-color_profile() {
-  if [ "${disable_color_prompt-}" ]; then
+no_color_profile() {
     cat << ____END 
       local reset=''
       local bold=''
-
       local red=''
       local light_red=''
       local green=''
@@ -38,11 +22,12 @@ color_profile() {
       local light_gray=''
       local white=''
 ____END
-  else
+}
+
+color_profile() {
     cat << ____END 
       local reset='\[\e[00m\]'
       local bold='\[\e[01m\]'
-
       local red='\[\e[0;31m\]'
       local light_red='\[\e[1;31m\]'
       local green='\[\e[0;32m\]'
@@ -58,7 +43,56 @@ ____END
       local light_gray='\[\e[0;37m\]'
       local white='\[\e[1;37m\]'
 ____END
+}
+
+user_name_prompt() {
+  local user="\u"
+  echo -n "${light_gray}${user}"
+}
+
+host_name_prompt() {
+  local host="\h"
+  echo -n "${light_gray}@${host}"
+}
+
+dir_prompt() {
+  local dir="\W"
+  echo -n "${light_red}:${dir}"
+}
+
+default_prompt() {
+  echo -n "$(user_name_prompt)$(host_name_prompt)$(dir_prompt)"
+}
+
+git_branch_prompt() {
+  local arrow=' → '
+  local git_branch=$(git branch | grep "*" | awk '{print $2}')
+  if [ $? -eq 0 ]; then
+      echo -n "${yellow}${arrow}${git_branch}"  
   fi
+}
+
+git_files_changed_prompt() {
+  local nb_files=$(git status -s | wc -l | tr -d ' ')
+  if [ $nb_files -ne 0 ]; then
+    echo -n "${yellow} : ${nb_files}"
+  fi
+}
+
+git_ahead_and_behind_prompt(){
+  local ahead=$(git rev-list @{u}..HEAD 2>/dev/null | wc -l)
+  local behind=$(git rev-list HEAD..@{u} 2>/dev/null | wc -l)
+  if [ $ahead -ne 0 -a $behind -eq 0 ]; then
+      local ahead_behind="${red} +${ahead}"
+  elif [ $behind -ne 0 -a $ahead -eq 0 ]; then
+      local ahead_behind="${red} -${behind}"
+  elif [ $ahead -eq 0 -a $behind -eq 0 ]; then
+      local ahead_behind=""
+  else
+      local ahead_behind="${red} +${ahead} -${behind}"
+  fi
+
+  echo -n $ahead_behind
 }
 
 is_git_dir() {
@@ -67,44 +101,6 @@ is_git_dir() {
   else
     return 1
   fi
-}
-
-git_branch_prompt() {
-  eval "$(prompt_constants)"
-  local git_branch=$(git branch | grep "*" | awk '{print $2}')
-  if [ $? -eq 0 ]; then
-      echo -n "${yellow}${arrow}${git_branch}"  
-  fi
-}
-
-git_files_changed_prompt() {
-  eval "$(prompt_constants)"
-  local nb_files=$(git status -s | wc -l | tr -d ' ')
-  if [ $nb_files -ne 0 ]; then
-    echo -n "$yellow : $nb_files"
-  fi
-}
-
-git_ahead_and_behind_prompt(){
-  eval "$(prompt_constants)"
-  local ahead=$(git rev-list @{u}..HEAD 2>/dev/null | wc -l)
-  local behind=$(git rev-list HEAD..@{u} 2>/dev/null | wc -l)
-  if [ $ahead -ne 0 -a $behind -eq 0 ]; then
-      local ahead_behind="$red +$ahead"
-  elif [ $behind -ne 0 -a $ahead -eq 0 ]; then
-      local ahead_behind="$red -$behind"
-  elif [ $ahead -eq 0 -a $behind -eq 0 ]; then
-      local ahead_behind=""
-  else
-      local ahead_behind="$red +$ahead -$behind"
-  fi
-
-  echo -n $ahead_behind
-}
-
-default_prompt() {
-  eval "$(prompt_constants)"
-  echo -n "${light_gray}${user}@${host}:${light_red}${dir}"
 }
 
 git_prompt() {
@@ -129,19 +125,21 @@ is_xterm() {
 
 terminal_title() {
   if is_xterm; then
-    disable_color_prompt=yes
-    eval "$(prompt_constants)"
-    echo -n "${title_start}$(default_prompt)$(git_prompt)${title_end}"
-    unset disable_color_prompt
+    local title_start="\[\033]2;"
+    local title_end="\007\]"
+    echo -n "${title_start}$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)${title_end}"
   fi
 }
 
 prompt() {
-  unset disable_color_prompt
-  eval "$(prompt_constants)"
-  local prompt_data="$(terminal_title)$(default_prompt)$(git_prompt)"
-  PS1="${prompt_data}${reset} \$ "
+  eval "$(no_color_profile)"
+  local title=$(terminal_title)
+  
+  eval "$(color_profile)"
+  local prompt=$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)
+
+  unset PS1
+  PS1="$title$prompt${reset} \$ "
 }
  
-unset PS1
 PROMPT_COMMAND=prompt
