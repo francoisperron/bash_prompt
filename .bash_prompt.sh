@@ -5,7 +5,6 @@ export LSCOLORS=gxBxhxDxfxhxhxhxhxcxcx
 
 no_color_profile() {
     cat << ____END 
-      local reset=''
       local bold=''
       local red=''
       local light_red=''
@@ -26,7 +25,6 @@ ____END
 
 color_profile() {
     cat << ____END 
-      local reset='\[\e[00m\]'
       local bold='\[\e[01m\]'
       local red='\[\e[0;31m\]'
       local light_red='\[\e[1;31m\]'
@@ -58,10 +56,6 @@ host_name_prompt() {
 dir_prompt() {
   local dir="\W"
   echo -n "${light_red}:${dir}"
-}
-
-default_prompt() {
-  echo -n "$(user_name_prompt)$(host_name_prompt)$(dir_prompt)"
 }
 
 git_branch_prompt() {
@@ -124,6 +118,7 @@ is_xterm() {
 }
 
 terminal_title() {
+  eval "$(no_color_profile)"
   if is_xterm; then
     local title_start="\[\033]2;"
     local title_end="\007\]"
@@ -131,15 +126,18 @@ terminal_title() {
   fi
 }
 
-prompt() {
-  eval "$(no_color_profile)"
-  local title=$(terminal_title)
-  
+prompt(){
   eval "$(color_profile)"
-  local prompt=$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)
+  echo -n "$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)"
+}
+
+set_ps1() {
+  local title=$(terminal_title)  
+  local prompt=$(prompt)
+  local reset='\[\e[00m\]'
 
   unset PS1
-  PS1="$title$prompt${reset} \$ "
+  PS1="${title}${prompt}${reset} \$ "
 }
  
-PROMPT_COMMAND=prompt
+PROMPT_COMMAND=set_ps1
