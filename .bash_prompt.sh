@@ -117,18 +117,51 @@ is_xterm() {
   esac
 }
 
+hg_files_changed_prompt() {
+  local nb_files=$(hg status | wc -l | tr -d ' ')
+  if [ $nb_files -ne 0 ]; then
+    echo -n "${yellow} : ${nb_files}"
+  fi
+}
+
+hg_branch_prompt() {
+  local arrow=' → '
+  local hg_branch=$(hg branch | awk '{print $0}')
+  if [ $? -eq 0 ]; then
+      echo -n "${yellow}${arrow}${hg_branch}"  
+  fi
+}
+
+is_hg_dir() {
+  if hg status >/dev/null 2>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+hg_prompt() {
+  if is_hg_dir; then
+      local branch=$(hg_branch_prompt)
+      local nb_files=$(hg_files_changed_prompt)
+      # local ahead_behind=$(git_ahead_and_behind_prompt)
+      # echo -n "${branch}${nb_files}${ahead_behind}"
+      echo -n "${branch}${nb_files}"
+  fi
+}
+
 terminal_title() {
   eval "$(no_color_profile)"
   if is_xterm; then
     local title_start="\[\033]2;"
     local title_end="\007\]"
-    echo -n "${title_start}$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)${title_end}"
+    echo -n "${title_start}$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)$(hg_prompt)${title_end}"
   fi
 }
 
 prompt(){
   eval "$(color_profile)"
-  echo -n "$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)"
+  echo -n "$(user_name_prompt)$(host_name_prompt)$(dir_prompt)$(git_prompt)$(hg_prompt)"
 }
 
 set_ps1() {
